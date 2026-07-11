@@ -159,6 +159,28 @@ async function embedHandler(req, res, next) {
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, setupUI);
                 hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, updateAudioUI);
+                
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.error("Error de red de HLS.js");
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.error("Error de medios de HLS.js");
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                hls.destroy();
+                                loader.style.display = 'none';
+                                video.style.display = 'none';
+                                errorView.style.display = 'block';
+                                errorView.textContent = "Error reproduciendo video: El servidor de origen (VOE/Filemoon) bloqueó la conexión (IP o Error 403). Intenta con otro servidor.";
+                                break;
+                        }
+                    }
+                });
             } else {
                 video.src = url;
             }
