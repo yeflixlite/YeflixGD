@@ -40,8 +40,24 @@ class SecurityService {
   }
 
   static validateToken(base64UrlToken, currentIp = '0.0.0.0') {
-    // Si necesitas validar en Vercel, deberás separar el iv (12b), authTag (16b) y encrypted
-    throw new Error("Validación delegada a Cloudflare Worker para ahorrar ancho de banda.");
+    const combined = Buffer.from(base64UrlToken, 'base64url');
+    const iv = combined.subarray(0, 12);
+    const authTag = combined.subarray(combined.length - 16);
+    const encrypted = combined.subarray(12, combined.length - 16);
+
+    const decipher = crypto.createDecipheriv(ALGORITHM, SECRET_KEY, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(encrypted, null, 'utf8');
+    decrypted += decipher.final('utf8');
+
+    const payload = JSON.parse(decrypted);
+
+    if (payload.e < Math.floor(Date.now() / 1000)) {
+      throw new Error('El enlace de video ha expirado.');
+    }
+    
+    return payload.u;
   }
 
   static isPublicHttpUrl(url) {
