@@ -69,9 +69,10 @@ async function playHandler(req, res, next) {
     const SecurityService = require('../services/securityService');
     const token = SecurityService.generateToken(result.videoUrl, '0.0.0.0', 21600); // 6 horas TTL
     
-    // Devolvemos la URL del manifiesto protegido dirigida al Cloudflare Worker
-    const workerHost = process.env.WORKER_URL || 'TU-WORKER.tusubdominio.workers.dev';
-    const proxyUrl = `https://${workerHost}/v/${token}?referer=${encodeURIComponent(result.referer || '')}`;
+    // Devolvemos la URL del manifiesto protegido (Proxy M3U8 local)
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const serverHost = req.get('host');
+    const proxyUrl = `${protocol}://${serverHost}/v/${token}?referer=${encodeURIComponent(result.referer || '')}`;
 
     return res.json({
       videoUrl : result.videoUrl,

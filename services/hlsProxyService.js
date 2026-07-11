@@ -49,13 +49,17 @@ class HlsProxyService {
         const fullUrl = new URL(line, base).href;
         // Dependiendo de la extensión, lo mandamos a /v/ (manifest) o /s/ (segment)
         const isManifest = fullUrl.includes('.m3u8') || fullUrl.includes('.txt');
-        const endpoint = isManifest ? '/v/' : '/s/';
         
-        // Generamos un token seguro para esta URL
-        const token = SecurityService.generateToken(fullUrl, '0.0.0.0', 21600);
-        
-        const proxyUrl = `${protocol}://${serverHost}${endpoint}${token}?referer=${encodeURIComponent(referer)}`;
-        rewritten.push(proxyUrl);
+        if (isManifest) {
+          // Si es un sub-manifiesto (m3u8), lo pasamos por nuestro proxy para bypassear CORS y ocultarlo
+          const token = SecurityService.generateToken(fullUrl, '0.0.0.0', 21600);
+          const proxyUrl = `${protocol}://${serverHost}/v/${token}?referer=${encodeURIComponent(referer)}`;
+          rewritten.push(proxyUrl);
+        } else {
+          // Si es un fragmento de video (.ts), dejamos la URL original directa al CDN
+          // Esto ahorra el 100% del ancho de banda en Vercel
+          rewritten.push(fullUrl);
+        }
       } catch (err) {
         // En caso de error parseando URL, devolvemos la línea original
         rewritten.push(line);
