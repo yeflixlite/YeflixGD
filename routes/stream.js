@@ -20,15 +20,15 @@ router.get('/v/:token', async (req, res, next) => {
     const referer = req.query.referer || '';
     
     // 1. Validar Token (IP validation disabled for Vercel dynamic IPs, can pass req.ip if needed)
-    const { url } = SecurityService.validateToken(token, '0.0.0.0');
+    const targetUrl = SecurityService.validateToken(token, '0.0.0.0');
 
     // 2. UrlGuard
-    if (!SecurityService.isPublicHttpUrl(url)) {
+    if (!SecurityService.isPublicHttpUrl(targetUrl)) {
       return res.status(403).send('Forbidden: Invalid URL');
     }
 
     // 3. Obtener Manifiesto
-    const { content, finalUrl } = await HlsProxyService.fetchManifest(url, referer);
+    const { content, finalUrl } = await HlsProxyService.fetchManifest(targetUrl, referer);
 
     // 4. Reescribir Manifiesto
     const serverHost = req.get('host');
@@ -56,14 +56,14 @@ router.get('/s/:token', async (req, res, next) => {
     const { token } = req.params;
     const referer = req.query.referer || '';
     
-    const { url } = SecurityService.validateToken(token, '0.0.0.0');
+    const targetUrl = SecurityService.validateToken(token, '0.0.0.0');
 
-    if (!SecurityService.isPublicHttpUrl(url)) {
+    if (!SecurityService.isPublicHttpUrl(targetUrl)) {
       return res.status(403).send('Forbidden: Invalid URL');
     }
 
     // Stream directo
-    await HlsProxyService.streamSegment(url, referer, res);
+    await HlsProxyService.streamSegment(targetUrl, referer, res);
   } catch (err) {
     console.error('[Segment Proxy Error]', err.message);
     res.status(500).send('Error loading segment');
