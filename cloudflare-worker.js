@@ -25,7 +25,10 @@ export default {
       const targetUrl = await decryptToken(token, SECRET_KEY);
 
       if (!targetUrl.startsWith('http')) {
-        return new Response("URL Invalida", { status: 403 });
+        return new Response("URL Invalida", { 
+          status: 403, 
+          headers: { 'Access-Control-Allow-Origin': '*' } 
+        });
       }
 
       // 2. Si es un Segmento (/s/) -> Hacemos Stream Binario Directo
@@ -39,7 +42,10 @@ export default {
       }
 
     } catch (err) {
-      return new Response("Token Invalido o Error Interno: " + err.message, { status: 403 });
+      return new Response("Token Invalido o Error Interno: " + err.message, { 
+        status: 403, 
+        headers: { 'Access-Control-Allow-Origin': '*' } 
+      });
     }
   }
 };
@@ -57,7 +63,11 @@ async function proxySegment(targetUrl, referer) {
   const response = await fetch(targetUrl, { headers });
   
   // Devolvemos la respuesta exacta (stream) añadiendo CORS
-  const newResponse = new Response(response.body, response);
+  const newResponse = new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers
+  });
   newResponse.headers.set('Access-Control-Allow-Origin', '*');
   newResponse.headers.set('Cache-Control', 'public, max-age=31536000');
   return newResponse;
@@ -72,6 +82,14 @@ async function proxyManifest(targetUrl, referer, workerOrigin) {
   }
 
   const response = await fetch(targetUrl, { headers });
+  
+  if (!response.ok) {
+    return new Response(await response.text(), { 
+      status: response.status, 
+      headers: { 'Access-Control-Allow-Origin': '*' } 
+    });
+  }
+  
   let text = await response.text();
   const finalUrl = response.url || targetUrl;
   const baseUrl = new URL(finalUrl);
